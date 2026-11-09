@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Weatherly is a real-time weather intelligence dashboard powered by Open-Meteo.">
+  <meta name="theme-color" content="#111713">
+  <title>Weatherly — Weather Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <a href="#" class="logo" aria-label="Weatherly home"><span class="logo-icon">◒</span> WEATHERLY</a>
+      <div class="header-right">
+        <span class="live-indicator"><span class="live-dot"></span> LIVE WEATHER</span>
+        <button id="unitToggle" class="icon-button" type="button" aria-label="Toggle temperature units">°C</button>
+        <button id="themeToggle" class="icon-button" type="button" aria-label="Switch color theme">☼</button>
+      </div>
+    </header>
+
+    <section class="search-section">
+      <div class="intro">
+        <p class="eyebrow">WEATHER INTELLIGENCE</p>
+        <h1>Know the sky.<br><span>Own the day.</span></h1>
+        <p class="subtitle">Live conditions, air quality and thoughtful forecasts for wherever life takes you.</p>
+      </div>
+      <div class="search-tools">
+        <form id="searchForm" class="search-box" role="search">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="cityInput" type="search" placeholder="Search a city…" autocomplete="off" aria-label="Search city" aria-autocomplete="list" aria-controls="suggestions">
+          <button id="voiceBtn" class="voice-button" type="button" aria-label="Search by voice" title="Search by voice">🎙</button>
+          <button type="submit" id="searchBtn">Search</button>
+          <ul id="suggestions" class="suggestions hidden" role="listbox"></ul>
+        </form>
+        <div class="toolbar">
+          <button id="locationBtn" class="text-button" type="button">⌖ Use my location</button>
+          <button id="refreshBtn" class="text-button" type="button">↻ Refresh</button>
+          <button id="shareBtn" class="text-button" type="button">↗ Share</button>
+          <label class="refresh-setting">Auto refresh
+            <select id="refreshInterval" aria-label="Automatic refresh interval">
+              <option value="0">Off</option>
+              <option value="5">5 min</option>
+              <option value="15" selected>15 min</option>
+              <option value="30">30 min</option>
+            </select>
+          </label>
+        </div>
+        <p id="lastUpdated" class="updated-label">Waiting for live data</p>
+      </div>
+    </section>
+
+    <div id="statusMessage" class="status-message hidden" role="status" aria-live="polite"><span id="statusText"></span><button id="retryBtn" class="retry-button hidden" type="button">Try again</button></div>
+    <main id="weatherContent" class="weather-content hidden">
+      <section class="current-weather card">
+        <div class="weather-left">
+          <p class="section-label">CURRENT WEATHER</p>
+          <div class="city-title-row">
+            <div><h2 id="cityName"></h2><p id="countryName" class="country-name"></p></div>
+            <button id="favoriteBtn" class="favorite-button" type="button" aria-label="Add city to favourites">☆</button>
+          </div>
+          <p id="currentDate" class="current-date"></p>
+          <div class="temperature-row"><h1 id="temperature">--</h1><div class="weather-symbol" id="weatherIcon" aria-hidden="true">☀</div></div>
+          <h3 id="weatherDescription"></h3>
+          <p class="feels-like">Feels like <span id="feelsLike">--</span></p>
+        </div>
+        <div class="weather-right">
+          <p class="weather-note">A LITTLE WEATHER WISDOM</p>
+          <p id="weatherHighlight" class="weather-highlight"></p>
+          <p id="comfortTip" class="comfort-tip"></p>
+        </div>
+      </section>
+
+      <section class="details-section">
+        <div class="section-heading"><div><p class="eyebrow">AT A GLANCE</p><h2>Right now</h2></div></div>
+        <div class="details-grid">
+          <article class="detail-card"><div class="detail-icon">◌</div><p>Humidity</p><h3 id="humidity">--</h3><span>Relative humidity</span></article>
+          <article class="detail-card"><div class="detail-icon">≋</div><p>Wind speed</p><h3 id="windSpeed">--</h3><span>10 m above ground</span></article>
+          <article class="detail-card"><div class="detail-icon">⌁</div><p>Precipitation</p><h3 id="precipitation">--</h3><span>Current amount</span></article>
+          <article class="detail-card"><div class="detail-icon">◉</div><p>UV index</p><h3 id="uvCurrent">--</h3><span id="uvCategory">UV exposure</span><div class="uv-meter"><span id="uvMeter"></span></div></article>
+        </div>
+      </section>
+
+      <section class="split-grid section-block">
+        <article class="panel sun-card">
+          <div class="section-heading"><div><p class="eyebrow">DAYLIGHT</p><h2>Sunrise & sunset</h2></div><span class="sun-mark">☼</span></div>
+          <div class="sun-times"><div><span class="muted">SUNRISE</span><strong id="sunrise">--:--</strong></div><div><span class="muted">SUNSET</span><strong id="sunset">--:--</strong></div></div>
+          <div class="daylight-track"><span id="daylightFill"></span></div>
+          <p id="daylightDuration" class="muted">Daylight duration unavailable</p>
+        </article>
+        <article class="panel aqi-card">
+          <div class="section-heading"><div><p class="eyebrow">BREATHE EASY</p><h2>Air quality</h2></div><span class="scale-note" title="European AQI: a 0–100+ scale; higher values indicate poorer air quality.">EUROPEAN AQI ⓘ</span></div>
+          <div class="aqi-main"><strong id="aqiValue">--</strong><span id="aqiCategory">Loading air data…</span></div>
+          <div class="aqi-meter"><span id="aqiMeter"></span></div>
+          <p id="aqiAdvice" class="muted">Air-quality guidance will appear when data is available.</p>
+          <div class="pollutant-grid">
+            <div><span>PM2.5</span><strong id="pm25">--</strong></div><div><span>PM10</span><strong id="pm10">--</strong></div>
+            <div><span>NO₂</span><strong id="no2">--</strong></div><div><span>O₃</span><strong id="ozone">--</strong></div>
+          </div>
+          <p id="aqiScale" class="fine-print">European AQI is an hourly modelled indicator; pollutant units: μg/m³.</p>
+        </article>
+      </section>
+
+      <section class="panel section-block">
+        <div class="section-heading"><div><p class="eyebrow">THE NEXT DAY</p><h2>24-hour forecast</h2></div><span class="forecast-tag">HOURLY · LOCAL TIME</span></div>
+        <div id="hourlyForecast" class="hourly-strip" aria-label="Hourly weather forecast"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">PLAN YOUR WEEK</p><h2>7-day forecast</h2></div><span class="forecast-tag">DAILY OUTLOOK</span></div>
+        <div id="forecastGrid" class="forecast-grid"></div>
+      </section>
+
+      <section class="section-block">
+        <div class="section-heading"><div><p class="eyebrow">WEATHER AT A GLANCE</p><h2>Forecast charts</h2></div><span class="muted fine-print">Hover or tap chart points for details</span></div>
+        <div class="charts-grid">
+          <article class="panel chart-panel"><h3>24-hour temperature</h3><div class="chart-wrap"><canvas id="temperatureChart" aria-label="24-hour temperature chart"></canvas></div></article>
+          <article class="panel chart-panel"><h3>Weekly high & low</h3><div class="chart-wrap"><canvas id="weeklyChart" aria-label="Weekly maximum and minimum temperatures chart"></canvas></div></article>
+          <article class="panel chart-panel"><h3>Humidity</h3><div class="chart-wrap"><canvas id="humidityChart" aria-label="24-hour humidity chart"></canvas></div></article>
+          <article class="panel chart-panel"><h3>Wind speed</h3><div class="chart-wrap"><canvas id="windChart" aria-label="24-hour wind speed chart"></canvas></div></article>
+        </div>
+      </section>
+
+      <section class="split-grid section-block">
+        <article class="panel">
+          <div class="section-heading"><div><p class="eyebrow">SMART SUGGESTIONS</p><h2>Dress for the day</h2></div></div>
+          <p id="clothingTip" class="recommendation">Recommendations are based on the live temperature and precipitation forecast.</p>
+          <p id="rainTip" class="recommendation secondary-recommendation"></p>
+        </article>
+        <article class="panel">
+          <div class="section-heading"><div><p class="eyebrow">FORECAST SIGNALS</p><h2>Weather alerts</h2></div></div>
+          <p class="fine-print">Forecast-based advisories from Open-Meteo; these are not official emergency alerts.</p>
+          <ul id="alertsList" class="alerts-list"></ul>
+        </article>
+      </section>
+
+      <section class="split-grid section-block">
+        <article class="panel">
+          <div class="section-heading"><div><p class="eyebrow">YOUR PLACES</p><h2>Favourite cities</h2></div></div>
+          <div id="favoritesList" class="city-list"></div>
+          <p id="favoritesEmpty" class="empty-note">Save a city with the ☆ button to keep it close.</p>
+        </article>
+        <article class="panel">
+          <div class="section-heading"><div><p class="eyebrow">PICK UP WHERE YOU LEFT OFF</p><h2>Recent searches</h2></div><button id="clearHistoryBtn" class="text-button" type="button">Clear</button></div>
+          <div id="recentList" class="city-list"></div>
+          <p id="recentEmpty" class="empty-note">Cities you search for will show up here.</p>
+        </article>
+      </section>
+
+      <section class="panel section-block">
+        <div class="section-heading"><div><p class="eyebrow">SIDE BY SIDE</p><h2>Compare cities</h2></div></div>
+        <form id="compareForm" class="compare-form">
+          <label for="compareInput">Enter two or more places, separated by commas</label>
+          <div class="compare-controls"><input id="compareInput" type="text" placeholder="e.g. Mumbai, Delhi, Pune"><button class="primary-button" type="submit">Compare</button></div>
+        </form>
+        <div id="compareResults" class="compare-grid"></div>
+      </section>
+
+      <section class="panel section-block">
+        <div class="section-heading"><div><p class="eyebrow">EXPLORE THE AREA</p><h2>City map</h2></div><span class="fine-print">OpenStreetMap · Select a marker to switch city</span></div>
+        <div id="weatherMap" aria-label="Map showing the selected city and searched locations"></div>
+      </section>
+    </main>
+    <footer class="footer"><p>Weatherly · Free weather data from Open-Meteo · Map © OpenStreetMap contributors</p><p id="dataNote">Weather and air-quality forecasts are modelled data and may differ from local observations.</p></footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="script.js"></script>
+</body>
+</html>
